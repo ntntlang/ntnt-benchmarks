@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ntnt Benchmark Results — Full Framework Comparison</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, sans-serif; background: #0a0a0f; color: #e4e4e7; padding: 2rem; }
+  h1 { font-size: 2.2rem; font-weight: 800; margin-bottom: 0.25rem; }
+  h1 span { color: #a78bfa; }
+  .subtitle { color: #71717a; font-size: 0.95rem; margin-bottom: 2.5rem; }
+  .chart-section { margin-bottom: 3rem; background: #18181b; border-radius: 12px; padding: 1.5rem; border: 1px solid #27272a; }
+  .chart-section h2 { font-size: 1.3rem; margin-bottom: 0.25rem; color: #fafafa; }
+  .chart-section .desc { color: #71717a; font-size: 0.85rem; margin-bottom: 1rem; }
+  .chart-wrap { position: relative; height: 340px; }
+  .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 2.5rem; }
+  .stat-card { background: #18181b; border: 1px solid #27272a; border-radius: 10px; padding: 1.25rem; }
+  .stat-card .label { color: #71717a; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .stat-card .value { font-size: 2rem; font-weight: 700; color: #a78bfa; margin: 0.25rem 0; }
+  .stat-card .detail { color: #a1a1aa; font-size: 0.85rem; }
+  .legend-note { color: #52525b; font-size: 0.8rem; text-align: center; margin-top: 0.5rem; }
+  footer { text-align: center; color: #3f3f46; font-size: 0.8rem; margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid #27272a; }
+  footer a { color: #7c3aed; text-decoration: none; }
+</style>
+</head>
+<body>
+
+<h1>ntnt <span>Benchmarks</span></h1>
+<p class="subtitle">Full framework comparison · ntnt v0.4.1 → v0.4.2 progression · 16 CPUs, 59 GiB RAM · wrk: 4 threads, 100 connections, 15s, median of 3 runs</p>
+
+<div class="summary">
+  <div class="stat-card">
+    <div class="label">Biggest Win</div>
+    <div class="value">5.1×</div>
+    <div class="detail">DB queries & template rendering (v0.4.1 → v0.4.2)</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Plaintext Throughput</div>
+    <div class="value">302K</div>
+    <div class="detail">req/sec — 2.6× over v0.4.1, faster than FastAPI & Hono</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">DB Single Query</div>
+    <div class="value">37.8K</div>
+    <div class="detail">req/sec — now matches FastAPI (was 8.4K in v0.4.1)</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Zero Dependencies</div>
+    <div class="value">99 LOC</div>
+    <div class="detail">Full benchmark impl — single binary, no package manager</div>
+  </div>
+</div>
+
+<div class="chart-section">
+  <h2>Plaintext — <code>GET /plaintext</code></h2>
+  <div class="desc">Return "Hello, World!" as plain text. Pure HTTP overhead measurement.</div>
+  <div class="chart-wrap"><canvas id="chart-plaintext"></canvas></div>
+</div>
+
+<div class="chart-section">
+  <h2>JSON Serialization — <code>GET /json</code></h2>
+  <div class="desc">Return {"message":"Hello, World!"} as JSON. Measures serialization + HTTP.</div>
+  <div class="chart-wrap"><canvas id="chart-json"></canvas></div>
+</div>
+
+<div class="chart-section">
+  <h2>Route Parameters — <code>GET /users/{id}</code></h2>
+  <div class="desc">Parse a URL parameter and return JSON. Tests router performance.</div>
+  <div class="chart-wrap"><canvas id="chart-params"></canvas></div>
+</div>
+
+<div class="chart-section">
+  <h2>JSON Body Parsing — <code>POST /json</code></h2>
+  <div class="desc">Parse incoming JSON body and echo it back. Tests request body handling.</div>
+  <div class="chart-wrap"><canvas id="chart-jsonbody"></canvas></div>
+</div>
+
+<div class="chart-section">
+  <h2>Single DB Query — <code>GET /db</code></h2>
+  <div class="desc">One random PostgreSQL query, serialize result as JSON. The real-world baseline.</div>
+  <div class="chart-wrap"><canvas id="chart-db"></canvas></div>
+</div>
+
+<div class="chart-section">
+  <h2>Multiple DB Queries — <code>GET /queries?count=20</code></h2>
+  <div class="desc">20 sequential random queries per request. Stress-tests DB driver + connection handling.</div>
+  <div class="chart-wrap"><canvas id="chart-queries"></canvas></div>
+</div>
+
+<div class="chart-section">
+  <h2>Template Rendering — <code>GET /template</code></h2>
+  <div class="desc">10 DB queries + HTML table generation. Closest to a real page render.</div>
+  <div class="chart-wrap"><canvas id="chart-template"></canvas></div>
+</div>
+
+<footer>
+  <a href="https://github.com/ntntlang/ntnt-benchmarks">ntntlang/ntnt-benchmarks</a> · Benchmarked 2026-03-12 · <a href="https://ntnt-lang.org">ntnt-lang.org</a>
+</footer>
+
+<script>
+const COLORS = {
+  'ntnt 0.4.2':  '#a78bfa',
+  'ntnt 0.4.1':  '#4c1d95',
+  'actix-web':   '#f97316',
+  'gin':         '#06b6d4',
+  'fastapi':     '#22c55e',
+  'hono/bun':    '#eab308',
+  'express/ts':  '#ef4444',
+};
+
+const FRAMEWORKS = ['ntnt 0.4.2', 'ntnt 0.4.1', 'actix-web', 'gin', 'fastapi', 'hono/bun', 'express/ts'];
+
+const DATA = {
+  plaintext:  [302141, 118208, 476661, 406060, 173783, 118409, 18167],
+  json:       [295990, 108929, 476342, 387095, 151696, 105152, 17017],
+  params:     [267832, 88926,  469648, 384301, 130802, 101625, 16788],
+  jsonbody:   [252284, 76398,  447592, 324507, 116140, 82927,  11828],
+  db:         [37818,  8371,   64003,  130190, 36859,  32399,  11817],
+  queries:    [2349,   457,    3916,   9296,   5818,   2789,   2419],
+  template:   [4614,   899,    7696,   18014,  10431,  5171,   4112],
+};
+
+Chart.defaults.color = '#a1a1aa';
+Chart.defaults.borderColor = '#27272a';
+Chart.defaults.font.family = 'system-ui, -apple-system, sans-serif';
+
+function makeChart(canvasId, dataKey) {
+  const ctx = document.getElementById(canvasId).getContext('2d');
+  const values = DATA[dataKey];
+  const maxVal = Math.max(...values);
+
+  // Sort by value descending for visual clarity
+  const indices = values.map((v, i) => i).sort((a, b) => values[b] - values[a]);
+  const sortedLabels = indices.map(i => FRAMEWORKS[i]);
+  const sortedValues = indices.map(i => values[i]);
+  const sortedColors = indices.map(i => COLORS[FRAMEWORKS[i]]);
+
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: sortedLabels,
+      datasets: [{
+        data: sortedValues,
+        backgroundColor: sortedColors,
+        borderColor: sortedColors.map(c => c + '99'),
+        borderWidth: 1,
+        borderRadius: 4,
+        barPercentage: 0.7,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const v = ctx.raw;
+              if (v >= 1000) return (v / 1000).toFixed(1) + 'K req/sec';
+              return v.toLocaleString() + ' req/sec';
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: '#27272a' },
+          ticks: {
+            callback: (v) => v >= 1000 ? (v/1000) + 'K' : v,
+            color: '#71717a',
+          },
+          title: { display: true, text: 'Requests/sec', color: '#52525b' }
+        },
+        y: {
+          grid: { display: false },
+          ticks: {
+            color: (ctx) => {
+              const label = sortedLabels[ctx.index];
+              return label === 'ntnt 0.4.2' ? '#a78bfa' :
+                     label === 'ntnt 0.4.1' ? '#7c3aed' : '#a1a1aa';
+            },
+            font: (ctx) => ({
+              weight: sortedLabels[ctx.index]?.startsWith('ntnt') ? 'bold' : 'normal',
+              size: 13
+            })
+          }
+        }
+      }
+    },
+    plugins: [{
+      afterDraw: (chart) => {
+        const ctx = chart.ctx;
+        const meta = chart.getDatasetMeta(0);
+        ctx.save();
+        ctx.font = '12px system-ui';
+        ctx.fillStyle = '#a1a1aa';
+        ctx.textBaseline = 'middle';
+        meta.data.forEach((bar, i) => {
+          const v = sortedValues[i];
+          const label = v >= 1000 ? (v / 1000).toFixed(1) + 'K' : v.toLocaleString();
+          const x = bar.x + 8;
+          const y = bar.y;
+          if (bar.x > 50) {
+            ctx.fillText(label, x, y);
+          }
+        });
+        ctx.restore();
+      }
+    }]
+  });
+}
+
+makeChart('chart-plaintext', 'plaintext');
+makeChart('chart-json', 'json');
+makeChart('chart-params', 'params');
+makeChart('chart-jsonbody', 'jsonbody');
+makeChart('chart-db', 'db');
+makeChart('chart-queries', 'queries');
+makeChart('chart-template', 'template');
+</script>
+</body>
+</html>
