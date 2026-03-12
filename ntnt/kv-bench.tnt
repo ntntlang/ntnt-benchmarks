@@ -1,0 +1,54 @@
+import { json, text } from "std/http/server"
+import { open, get, set } from "std/kv"
+import { random_int } from "std/math"
+
+// Redis KV
+let redis_url = "redis://172.19.0.2:6379/5"
+let kv = open(redis_url) otherwise {
+    print("Failed to connect to Redis: {err}")
+    return
+}
+
+// Pre-seed 1000 keys
+for i in 0..1000 {
+    let _r = set(kv, "bench:{i}", map { "id": i, "value": "data-{i}" })
+}
+print("Seeded 1000 keys")
+
+fn health(req) {
+    return text("ok")
+}
+
+// Read a random key
+fn kv_read(req) {
+    let id = random_int(0, 999)
+    let val = get(kv, "bench:{id}") otherwise {
+        return json(map { "error": "read failed" })
+    }
+    return json(val ?? map { "miss": true })
+}
+
+// Write a random key
+fn kv_write(req) {
+    let id = random_int(0, 999)
+    let _w = set(kv, "bench:{id}", map { "id": id, "updated": true })
+    return json(map { "ok": true, "id": id })
+}
+
+// Read + Write (mixed)
+fn kv_mixed(req) {
+    let read_id = random_int(0, 999)
+    let val = get(kv, "bench:{read_id}") otherwise {
+        return json(map { "error": "read failed" })
+    }
+    let write_id = random_int(0, 999)
+    let _w = set(kv, "bench:{write_id}", map { "id": write_id, "from_read": read_id })
+    return json(val ?? map { "miss": true })
+}
+
+get("/health", health)
+get("/kv/read", kv_read)
+get("/kv/write", kv_write)
+get("/kv/mixed", kv_mixed)
+
+listen(3100)

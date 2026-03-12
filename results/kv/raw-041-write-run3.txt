@@ -1,0 +1,13 @@
+Running 15s test @ http://127.0.0.1:3100/kv/write
+  4 threads and 100 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency     4.85ms  307.63us   7.30ms   69.73%
+    Req/Sec     5.18k   170.67     5.80k    72.67%
+  Latency Distribution
+     50%    4.93ms
+     75%    5.00ms
+     90%    5.15ms
+     99%    5.75ms
+  309302 requests in 15.02s, 163.09MB read
+Requests/sec:  20588.01
+Transfer/sec:     10.86MB

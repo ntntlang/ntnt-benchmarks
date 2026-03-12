@@ -136,6 +136,23 @@ ntnt 0.4.2 is now faster than Express for template-heavy workloads.
 
 ---
 
+## Redis KV — v0.4.1 → v0.4.2
+
+Same worker pool improvement applies to Redis KV operations. Each worker gets its own
+Redis connection, eliminating the single-connection serialization bottleneck.
+
+Benchmark: 1000 pre-seeded keys, random read/write per request, same wrk config.
+
+| Benchmark | v0.4.1 | v0.4.2 | Improvement | p50 (v0.4.2) | p99 (v0.4.2) |
+|-----------|-------:|-------:|-------------|-------------|-------------|
+| Redis read | 21,403 | **66,963** | **3.1×** 🔥 | 1.48ms | 1.70ms |
+| Redis write | 20,784 | **62,319** | **3.0×** 🔥 | 1.59ms | 1.87ms |
+| Redis mixed (read+write) | 11,605 | **34,309** | **3.0×** 🔥 | 2.88ms | 3.34ms |
+
+v0.4.1 latencies were 3-4× higher (p50: 4.6ms read, 8.5ms mixed) due to single-thread queueing.
+
+---
+
 ## Developer Experience
 
 Same benchmark implemented in each framework. Lines of code comparison:
