@@ -1,0 +1,10 @@
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+target/
+gin/gin-bench
+bun.lockb
+vendor/
+tmp/
+*.log

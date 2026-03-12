@@ -1,0 +1,99 @@
+import { json, html, text, parse_json } from "std/http/server"
+import { connect, query } from "std/db/postgres"
+import { get_env } from "std/env"
+import { random_int } from "std/math"
+
+let db_url = get_env("DATABASE_URL") ?? "postgres://ntnt:rQmS9BOUr_yEuc6jZV03bdekIPLxgnou@172.19.0.3:5432/benchmarks"
+let pg = connect(db_url) otherwise {
+    print("Failed to connect to database: {err}")
+    return
+}
+
+fn plaintext(req) {
+    return text("Hello, World!")
+}
+
+fn json_test(req) {
+    return json(map { "message": "Hello, World!" })
+}
+
+fn user_by_id(req) {
+    let id = req["params"]["id"] ?? "0"
+    return json(map { "id": id })
+}
+
+fn db_single(req) {
+    let id = random_int(1, 10000)
+    let rows = query(pg, "SELECT id, randomnumber FROM world WHERE id = $1", [id]) otherwise {
+        return json(map { "error": "db error" })
+    }
+    let r = rows[0] ?? map {}
+    return json(map { "id": r["id"] ?? 0, "randomNumber": r["randomnumber"] ?? 0 })
+}
+
+fn db_multi(req) {
+    let _params = req["query_params"] ?? map {}
+    let count_str = _params["count"] ?? "1"
+    let mut count = int(count_str) ?? 1
+    if count < 1 {
+        count = 1
+    }
+    if count > 500 {
+        count = 500
+    }
+    let mut results = []
+    for i in 0..count {
+        let id = random_int(1, 10000)
+        let rows = query(pg, "SELECT id, randomnumber FROM world WHERE id = $1", [id]) otherwise {
+            return json(map { "error": "db error" })
+        }
+        let r = rows[0] ?? map {}
+        results = results + [map { "id": r["id"] ?? 0, "randomNumber": r["randomnumber"] ?? 0 }]
+    }
+    return json(results)
+}
+
+fn template_test(req) {
+    let mut items = []
+    for i in 0..10 {
+        let id = random_int(1, 10000)
+        let rows = query(pg, "SELECT id, randomnumber FROM world WHERE id = $1", [id]) otherwise {
+            return html("<h1>DB Error</h1>")
+        }
+        let r = rows[0] ?? map {}
+        items = items + [r]
+    }
+    let mut rows_html = ""
+    for item in items {
+        rows_html = rows_html + "<tr><td>" + str(item["id"] ?? 0) + "</td><td>" + str(item["randomnumber"] ?? 0) + "</td></tr>"
+    }
+    let page = """<!DOCTYPE html>
+<html>
+<head><title>Benchmark</title></head>
+<body>
+<h1>World Database</h1>
+<table>
+<tr><th>ID</th><th>Random Number</th></tr>
+{{rows_html}}
+</table>
+</body>
+</html>"""
+    return html(page)
+}
+
+fn json_body(req) {
+    let data = parse_json(req) otherwise {
+        return json(map { "error": "invalid json" })
+    }
+    return json(data)
+}
+
+get("/plaintext", plaintext)
+get("/json", json_test)
+get("/users/{id}", user_by_id)
+get("/db", db_single)
+get("/queries", db_multi)
+get("/template", template_test)
+post("/json", json_body)
+
+listen(3100)

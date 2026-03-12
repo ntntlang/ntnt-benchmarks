@@ -1,0 +1,14 @@
+{
+  "name": "hono-bun-benchmark",
+  "private": true,
+  "scripts": {
+    "start": "bun run app.ts"
+  },
+  "dependencies": {
+    "hono": "^4.6.0",
+    "pg": "^8.13.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.0"
+  }
+}
