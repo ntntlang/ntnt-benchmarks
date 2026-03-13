@@ -1,0 +1,8 @@
+{
+  "name": "fastify-bench",
+  "type": "module",
+  "dependencies": {
+    "fastify": "^5.0.0",
+    "pg": "^8.11.0"
+  }
+}
