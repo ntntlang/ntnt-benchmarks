@@ -14,7 +14,7 @@
   .chart-section { margin-bottom: 3rem; background: #18181b; border-radius: 12px; padding: 1.5rem; border: 1px solid #27272a; }
   .chart-section h2 { font-size: 1.3rem; margin-bottom: 0.25rem; color: #fafafa; }
   .chart-section .desc { color: #71717a; font-size: 0.85rem; margin-bottom: 1rem; }
-  .chart-wrap { position: relative; height: 340px; }
+  .chart-wrap { position: relative; height: 420px; }
   .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 2.5rem; }
   .stat-card { background: #18181b; border: 1px solid #27272a; border-radius: 10px; padding: 1.25rem; }
   .stat-card .label { color: #71717a; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
@@ -28,23 +28,23 @@
 <body>
 
 <h1>ntnt <span>Benchmarks</span></h1>
-<p class="subtitle">Full framework comparison · ntnt v0.4.1 → v0.4.2 progression · 16 CPUs, 59 GiB RAM · wrk: 4 threads, 100 connections, 15s, median of 3 runs</p>
+<p class="subtitle">9-framework comparison · 16 CPUs, 59 GiB RAM · wrk: 4 threads, 100 connections, 15s, median of 3 runs</p>
 
 <div class="summary">
   <div class="stat-card">
-    <div class="label">Biggest Win</div>
-    <div class="value">5.1×</div>
-    <div class="detail">DB queries & template rendering (v0.4.1 → v0.4.2)</div>
+    <div class="label">Frameworks Tested</div>
+    <div class="value">9</div>
+    <div class="detail">Rust, Go, Python, Node.js, Bun, Ruby</div>
   </div>
   <div class="stat-card">
-    <div class="label">Plaintext Throughput</div>
+    <div class="label">ntnt Plaintext</div>
     <div class="value">302K</div>
-    <div class="detail">req/sec — 2.6× over v0.4.1, faster than FastAPI & Hono</div>
+    <div class="detail">req/sec — #3 overall, faster than FastAPI, Hono, Fastify</div>
   </div>
   <div class="stat-card">
-    <div class="label">DB Single Query</div>
+    <div class="label">ntnt DB Query</div>
     <div class="value">37.8K</div>
-    <div class="detail">req/sec — now matches FastAPI (was 8.4K in v0.4.1)</div>
+    <div class="detail">req/sec — matches FastAPI, beats Fastify & Hono</div>
   </div>
   <div class="stat-card">
     <div class="label">Zero Dependencies</div>
@@ -101,25 +101,27 @@
 
 <script>
 const COLORS = {
-  'ntnt 0.4.2':  '#a78bfa',
-  'ntnt 0.4.1':  '#4c1d95',
+  'ntnt':        '#a78bfa',
   'actix-web':   '#f97316',
   'gin':         '#06b6d4',
   'fastapi':     '#22c55e',
+  'fastify':     '#3b82f6',
   'hono/bun':    '#eab308',
-  'express/ts':  '#ef4444',
+  'django':      '#10b981',
+  'express':     '#ef4444',
+  'rails':       '#dc2626',
 };
 
-const FRAMEWORKS = ['ntnt 0.4.2', 'ntnt 0.4.1', 'actix-web', 'gin', 'fastapi', 'hono/bun', 'express/ts'];
+const FRAMEWORKS = ['ntnt', 'actix-web', 'gin', 'fastapi', 'fastify', 'hono/bun', 'django', 'express', 'rails'];
 
 const DATA = {
-  plaintext:  [302141, 118208, 476661, 406060, 173783, 118409, 18167],
-  json:       [295990, 108929, 476342, 387095, 151696, 105152, 17017],
-  params:     [267832, 88926,  469648, 384301, 130802, 101625, 16788],
-  jsonbody:   [252284, 76398,  447592, 324507, 116140, 82927,  11828],
-  db:         [37818,  8371,   64003,  130190, 36859,  32399,  11817],
-  queries:    [2349,   457,    3916,   9296,   5818,   2789,   2419],
-  template:   [4614,   899,    7696,   18014,  10431,  5171,   4112],
+  plaintext:  [302141, 476661, 406060, 173783, 81212,  118409, 17967,  18167,  10844],
+  json:       [295990, 476342, 387095, 151696, 78421,  105152, 17119,  17017,  10387],
+  params:     [267832, 469648, 384301, 130802, 76910,  101625, 17245,  16788,  9926],
+  jsonbody:   [252284, 447592, 324507, 116140, 38456,  82927,  17111,  11828,  10941],
+  db:         [37818,  64003,  130190, 36859,  33244,  32399,  385,    11817,  7283],
+  queries:    [2349,   3916,   9296,   5818,   3222,   2789,   348,    2419,   1578],
+  template:   [4614,   7696,   18014,  10431,  5957,   5171,   434,    4112,   2676],
 };
 
 Chart.defaults.color = '#a1a1aa';
@@ -180,11 +182,10 @@ function makeChart(canvasId, dataKey) {
           ticks: {
             color: (ctx) => {
               const label = sortedLabels[ctx.index];
-              return label === 'ntnt 0.4.2' ? '#a78bfa' :
-                     label === 'ntnt 0.4.1' ? '#7c3aed' : '#a1a1aa';
+              return label === 'ntnt' ? '#a78bfa' : '#a1a1aa';
             },
             font: (ctx) => ({
-              weight: sortedLabels[ctx.index]?.startsWith('ntnt') ? 'bold' : 'normal',
+              weight: sortedLabels[ctx.index] === 'ntnt' ? 'bold' : 'normal',
               size: 13
             })
           }
