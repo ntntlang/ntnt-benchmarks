@@ -2,16 +2,30 @@
 
 HTTP framework performance benchmarks comparing **ntnt** against popular alternatives across real-world workloads.
 
-> **Language:** ntnt v0.4.1 (Rust runtime, Axum/Tokio)  
-> **Competitors:** FastAPI · Express/TypeScript · Gin · Hono/Bun · Actix Web  
-> **Tool:** [wrk](https://github.com/wg/wrk) — 4 threads, 100 connections, 30s per run, 3 runs (median)
+> **Language:** ntnt v0.4.2 (Rust runtime, Axum/Tokio)  
+> **Competitors:** Actix Web · Gin · FastAPI · Fastify · Hono/Bun · Django · Express · Rails  
+> **Tool:** [wrk](https://github.com/wg/wrk) — 4 threads, 100 connections, 15s per run, 3 runs (median)
 
 ---
 
 ## Latest Results
 
 <!-- RESULTS_TABLE_START -->
-*Run `./benchmark.sh` to generate results — see results/ for the latest.*
+
+| Benchmark | ntnt | Actix Web | Gin | FastAPI | Fastify | Hono/Bun | Django | Express | Rails |
+|-----------|------|-----------|-----|---------|---------|----------|--------|---------|-------|
+| **Plaintext** | 302,141 | **476,661** | 406,060 | 173,783 | 81,212 | 118,409 | 17,967 | 18,167 | 10,844 |
+| **JSON** | 295,990 | **476,342** | 387,095 | 151,696 | 78,421 | 105,152 | 17,119 | 17,017 | 10,387 |
+| **Params** | 267,832 | **469,648** | 384,301 | 130,802 | 76,910 | 101,625 | 17,245 | 16,788 | 9,926 |
+| **JSON Body** | 252,284 | **447,592** | 324,507 | 116,140 | 38,456 | 82,927 | 17,111 | 11,828 | 10,941 |
+| **DB (1 query)** | 37,818 | 64,003 | **130,190** | 36,859 | 33,244 | 32,399 | 385 | 11,817 | 7,283 |
+| **Queries (20)** | 2,349 | 3,916 | **9,296** | 5,818 | 3,222 | 2,789 | 348 | 2,419 | 1,578 |
+| **Template** | 4,614 | 7,696 | **18,014** | 10,431 | 5,957 | 5,171 | 434 | 4,112 | 2,676 |
+
+*All values are requests/sec (higher is better). Bold = fastest. Median of 3 runs, 15s each.*
+
+**Interactive charts:** [results/charts.html](results/charts.html)
+
 <!-- RESULTS_TABLE_END -->
 
 ---
@@ -49,6 +63,9 @@ Each framework implements identical endpoints using idiomatic code for that ecos
 | [Gin](./gin/) | Go | net/http + goroutines | 3103 |
 | [Hono](./hono-bun/) | TypeScript | Bun v1.3 | 3104 |
 | [Actix Web](./actix/) | Rust | Tokio (multi-worker) | 3105 |
+| [Fastify](./fastify/) | JavaScript | Node.js v22 | 3106 |
+| [Rails](./rails/) | Ruby 3.2 | Puma (4 workers) | 3107 |
+| [Django](./django/) | Python 3.12 | gunicorn (4 sync workers) | 3108 |
 
 ---
 
@@ -119,7 +136,7 @@ export DATABASE_URL="postgresql://user:pass@host:5432/benchmarks"
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--frameworks` | all | Space-separated list: `ntnt fastapi express gin hono actix` |
+| `--frameworks` | all | Space-separated list: `ntnt fastapi express gin hono actix fastify rails django` |
 | `--benchmarks` | all | Space-separated list: `plaintext json params db queries template json-body` |
 | `--duration` | `30` | Seconds per wrk run |
 | `--connections` | `100` | Concurrent connections |
@@ -154,7 +171,8 @@ results/
 
 ### Known caveats
 
-- **FastAPI** uses `--workers $(nproc)` (multi-process). ntnt, Gin, and Actix are multi-threaded single-process. Express and Hono are single-threaded.
+- **Multi-process vs single-process** — FastAPI uses `--workers $(nproc)`, Rails uses Puma with 4 workers, Django uses gunicorn with 4 sync workers. ntnt, Gin, and Actix are multi-threaded single-process. Express, Fastify, and Hono are single-threaded.
+- **Django sync caveat** — Django's DB numbers are limited by synchronous gunicorn workers + psycopg2. An async Django setup (ASGI + asyncpg) would perform significantly better.
 - **Same machine** — benchmarks run on the same host as PostgreSQL. Production would have separate hosts; DB-heavy benchmarks would look different.
 - **No reverse proxy** — no nginx in front. Real deployments add a layer.
 - **Actix** is included as a theoretical ceiling — it shows the interpreter overhead of ntnt vs raw Rust.
