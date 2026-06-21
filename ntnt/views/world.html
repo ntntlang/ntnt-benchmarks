@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Benchmark</title>
+</head>
+<body>
+  <h1>World Database</h1>
+  <table>
+    <thead>
+      <tr><th>ID</th><th>Random Number</th></tr>
+    </thead>
+    <tbody>
+      {{#for item in items}}
+        <tr><td>{{item.id}}</td><td>{{item.randomnumber}}</td></tr>
+      {{/for}}
+    </tbody>
+  </table>
+</body>
+</html>

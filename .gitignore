@@ -2,9 +2,12 @@ node_modules/
 __pycache__/
 *.pyc
 .venv/
+.bundle/
+vendor/bundle/
 target/
 gin/gin-bench
 bun.lockb
 vendor/
 tmp/
 *.log
+results/ntnt-internal/

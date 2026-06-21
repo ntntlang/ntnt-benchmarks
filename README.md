@@ -2,13 +2,15 @@
 
 HTTP framework performance benchmarks comparing **ntnt** against popular alternatives across real-world workloads.
 
-> **Language:** ntnt v0.4.2 (Rust runtime, Axum/Tokio)  
-> **Competitors:** Actix Web · Gin · FastAPI · Fastify · Hono/Bun · Django · Express · Rails  
-> **Tool:** [wrk](https://github.com/wg/wrk) — 4 threads, 100 connections, 15s per run, 3 runs (median)
+> **Language:** ntnt current `dev-release` or installed binary
+> **Competitors:** Actix Web · Gin · FastAPI · Fastify · Hono/Bun · Django · Express · Rails
+> **Tools:** `benchmark.sh` for cross-framework HTTP benchmarks; `scripts/run-ntnt-benchmarks.py` for DD-061 ntnt-internal before/after runs
 
 ---
 
-## Latest Results
+## Latest Published Results
+
+These are the last checked-in cross-framework results. Re-run `./benchmark.sh` on your target machine/runtime before using them as current claims.
 
 <!-- RESULTS_TABLE_START -->
 
@@ -119,7 +121,7 @@ export DATABASE_URL="postgresql://user:pass@host:5432/benchmarks"
 ### Running
 
 ```bash
-# Full suite (all frameworks, all benchmarks)
+# Full cross-framework suite (all frameworks, all benchmarks)
 ./benchmark.sh
 
 # Custom frameworks/benchmarks
@@ -131,6 +133,25 @@ export DATABASE_URL="postgresql://user:pass@host:5432/benchmarks"
 # All options
 ./benchmark.sh --help
 ```
+
+### DD-061 ntnt-internal benchmarks
+
+For ntnt runtime/interpreter optimization work, use the dedicated internal harness. It measures ntnt-only routes that are awkward to compare fairly across frameworks: interpreter compute loops, route-param/map reads, external-template rendering, partials, row-heavy template loops, and optional PostgreSQL probes.
+
+```bash
+# Build ../ntnt with cargo build --profile dev-release, then run a quick suite
+python3 scripts/run-ntnt-benchmarks.py --quick
+
+# Pin a specific checkout or binary
+NTNT_REPO=/path/to/ntnt python3 scripts/run-ntnt-benchmarks.py --duration 10s --runs 3
+NTNT_BIN=/path/to/ntnt python3 scripts/run-ntnt-benchmarks.py --quick --skip-build
+
+# Include optional DB routes
+DATABASE_URL=postgres://ntnt:***@localhost/benchmarks \
+  python3 scripts/run-ntnt-benchmarks.py --quick --include-db
+```
+
+Results are written to `results/ntnt-internal/`. For performance PRs, run the same command on `main` and the candidate branch, then compare the generated Markdown summaries.
 
 **Options:**
 

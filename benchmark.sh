@@ -16,7 +16,7 @@ DATE=$(date +%Y-%m-%d)
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 
 # Defaults
-FRAMEWORKS="${FRAMEWORKS:-ntnt fastapi express gin hono actix}"
+FRAMEWORKS="${FRAMEWORKS:-ntnt fastapi express gin hono actix fastify rails django}"
 BENCHMARKS="${BENCHMARKS:-plaintext json params db queries template json-body}"
 DURATION=30
 CONNECTIONS=100
@@ -32,6 +32,9 @@ declare -A PORTS=(
     [gin]=3103
     [hono]=3104
     [actix]=3105
+    [fastify]=3106
+    [rails]=3107
+    [django]=3108
 )
 
 # Parse args
@@ -114,6 +117,28 @@ start_framework() {
                 cargo build --release 2>/dev/null
             fi
             ./target/release/actix-bench 2>&1 &
+            ;;
+        fastify)
+            cd "$SCRIPT_DIR/fastify"
+            [ -d node_modules ] || npm install --silent
+            PORT="$port" node app.js &
+            ;;
+        rails)
+            cd "$SCRIPT_DIR/rails"
+            [ -d vendor/bundle ] || bundle install --quiet --path vendor/bundle
+            PORT="$port" bundle exec puma -C config/puma.rb &
+            ;;
+        django)
+            cd "$SCRIPT_DIR/django"
+            if [ ! -d .venv ]; then
+                python3 -m venv .venv
+                .venv/bin/pip install -q -r requirements.txt
+            fi
+            .venv/bin/gunicorn bench.wsgi:application --bind "0.0.0.0:$port" --workers 4 --log-level error &
+            ;;
+        *)
+            err "Unknown framework: $fw"
+            return 1
             ;;
     esac
 
@@ -305,6 +330,9 @@ for fw in $FRAMEWORKS; do
         gin)     loc=$(wc -l < "$SCRIPT_DIR/gin/main.go"); deps=2; size="~10MB (binary)" ;;
         hono)    loc=$(wc -l < "$SCRIPT_DIR/hono-bun/app.ts"); deps=$(jq '.dependencies | length' "$SCRIPT_DIR/hono-bun/package.json" 2>/dev/null || echo "?"); size="bun" ;;
         actix)   loc=$(wc -l < "$SCRIPT_DIR/actix/src/main.rs"); deps=$(grep -c '^\w' "$SCRIPT_DIR/actix/Cargo.toml" 2>/dev/null || echo "?"); size="~5MB (binary)" ;;
+        fastify) loc=$(wc -l < "$SCRIPT_DIR/fastify/app.js"); deps=$(jq '.dependencies | length' "$SCRIPT_DIR/fastify/package.json" 2>/dev/null || echo "?"); size="node_modules" ;;
+        rails)   loc=$(wc -l < "$SCRIPT_DIR/rails/app/controllers/bench_controller.rb"); deps=$(grep -c '^gem ' "$SCRIPT_DIR/rails/Gemfile" 2>/dev/null || echo "?"); size="vendor/bundle" ;;
+        django)  loc=$(wc -l < "$SCRIPT_DIR/django/bench/views.py"); deps=$(wc -l < "$SCRIPT_DIR/django/requirements.txt"); size="venv" ;;
         *)       loc="?"; deps="?"; size="?" ;;
     esac
     echo "| $fw | $loc | $deps | $size |"
