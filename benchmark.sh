@@ -16,7 +16,7 @@ DATE=$(date +%Y-%m-%d)
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 
 # Defaults
-FRAMEWORKS="${FRAMEWORKS:-ntnt fastapi express gin hono actix}"
+FRAMEWORKS="${FRAMEWORKS:-ntnt fastapi express gin hono actix fastify rails django}"
 BENCHMARKS="${BENCHMARKS:-plaintext json params db queries template json-body}"
 DURATION=30
 CONNECTIONS=100
@@ -32,6 +32,9 @@ declare -A PORTS=(
     [gin]=3103
     [hono]=3104
     [actix]=3105
+    [fastify]=3106
+    [rails]=3107
+    [django]=3108
 )
 
 # Parse args
@@ -115,6 +118,28 @@ start_framework() {
             fi
             ./target/release/actix-bench 2>&1 &
             ;;
+        fastify)
+            cd "$SCRIPT_DIR/fastify"
+            [ -d node_modules ] || npm install --silent
+            PORT="$port" node app.js &
+            ;;
+        rails)
+            cd "$SCRIPT_DIR/rails"
+            [ -d vendor/bundle ] || bundle install --quiet --path vendor/bundle
+            PORT="$port" bundle exec puma -C config/puma.rb &
+            ;;
+        django)
+            cd "$SCRIPT_DIR/django"
+            if [ ! -d .venv ]; then
+                python3 -m venv .venv
+                .venv/bin/pip install -q -r requirements.txt
+            fi
+            .venv/bin/gunicorn bench.wsgi:application --bind "0.0.0.0:$port" --workers 4 --log-level error &
+            ;;
+        *)
+            err "Unknown framework: $fw"
+            return 1
+            ;;
     esac
 
     local pid=$!
@@ -163,6 +188,24 @@ get_url() {
     esac
 }
 
+endpoint_status() {
+    local url="$1"
+    if [[ "$url" == POST:* ]]; then
+        curl -sS -o /dev/null -w "%{http_code}" \
+            -X POST \
+            -H "Content-Type: application/json" \
+            --data '{"message":"Hello, World!","numbers":[1,2,3,4,5],"nested":{"key":"value"}}' \
+            "${url#POST:}"
+    else
+        curl -sS -o /dev/null -w "%{http_code}" "$url"
+    fi
+}
+
+is_success_status() {
+    local status="$1"
+    [[ "$status" =~ ^2[0-9][0-9]$ || "$status" =~ ^3[0-9][0-9]$ ]]
+}
+
 run_wrk() {
     local url="$1"
     local method="${2:-GET}"
@@ -192,7 +235,11 @@ parse_wrk_output() {
     local p90=$(grep "90%" "$file" | awk '{print $2}')
     local p99=$(grep "99%" "$file" | awk '{print $2}')
     local transfer=$(grep "Transfer/sec:" "$file" | awk '{print $2}')
-    local errors=$(grep -c "Socket errors\|Non-2xx" "$file" || echo "0")
+    local socket_errors=$(grep "Socket errors:" "$file" | awk '{ total = 0; for (i = 1; i <= NF; i++) { gsub(",", "", $i); if ($i ~ /^[0-9]+$/) total += $i } print total }' || true)
+    socket_errors="${socket_errors:-0}"
+    local non_success=$(grep "Non-2xx or 3xx responses:" "$file" | awk '{print $NF}' || true)
+    non_success="${non_success:-0}"
+    local errors=$((socket_errors + non_success))
 
     echo "${rps:-0}|${avg_lat:-0}|${p50:-0}|${p75:-0}|${p90:-0}|${p99:-0}|${transfer:-0}|${errors}"
 }
@@ -245,6 +292,15 @@ for bench in $BENCHMARKS; do
         url=$(get_url "$bench" "$port")
 
         start_framework "$fw" || { warn "Skipping $fw"; continue; }
+
+        status_code=$(endpoint_status "$url" || echo "000")
+        if ! is_success_status "$status_code"; then
+            warn "Skipping $fw / $bench: endpoint returned HTTP $status_code"
+            echo "| $fw | skipped | skipped | skipped | skipped | HTTP $status_code |" >> "$SUMMARY_FILE"
+            stop_framework "$fw"
+            sleep 2
+            continue
+        fi
 
         # Warmup
         log "  Warming up $fw (${WARMUP}s)..."
@@ -305,6 +361,9 @@ for fw in $FRAMEWORKS; do
         gin)     loc=$(wc -l < "$SCRIPT_DIR/gin/main.go"); deps=2; size="~10MB (binary)" ;;
         hono)    loc=$(wc -l < "$SCRIPT_DIR/hono-bun/app.ts"); deps=$(jq '.dependencies | length' "$SCRIPT_DIR/hono-bun/package.json" 2>/dev/null || echo "?"); size="bun" ;;
         actix)   loc=$(wc -l < "$SCRIPT_DIR/actix/src/main.rs"); deps=$(grep -c '^\w' "$SCRIPT_DIR/actix/Cargo.toml" 2>/dev/null || echo "?"); size="~5MB (binary)" ;;
+        fastify) loc=$(wc -l < "$SCRIPT_DIR/fastify/app.js"); deps=$(jq '.dependencies | length' "$SCRIPT_DIR/fastify/package.json" 2>/dev/null || echo "?"); size="node_modules" ;;
+        rails)   loc=$(wc -l < "$SCRIPT_DIR/rails/app/controllers/bench_controller.rb"); deps=$(grep -c '^gem ' "$SCRIPT_DIR/rails/Gemfile" 2>/dev/null || echo "?"); size="vendor/bundle" ;;
+        django)  loc=$(wc -l < "$SCRIPT_DIR/django/bench/views.py"); deps=$(wc -l < "$SCRIPT_DIR/django/requirements.txt"); size="venv" ;;
         *)       loc="?"; deps="?"; size="?" ;;
     esac
     echo "| $fw | $loc | $deps | $size |"
