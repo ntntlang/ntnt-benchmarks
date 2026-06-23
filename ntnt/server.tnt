@@ -3,7 +3,7 @@ import { connect, query } from "std/db/postgres"
 import { get_env } from "std/env"
 import { random_int } from "std/math"
 
-let db_url = get_env("DATABASE_URL") ?? "postgresql://ntnt:rQmS9BOUr_yEuc6jZV03bdekIPLxgnou@172.19.0.3:5432/benchmarks"
+let db_url = get_env("DATABASE_URL") ?? ""
 let pg = if db_url != "" {
     match connect(db_url) {
         Ok(conn) => conn,
