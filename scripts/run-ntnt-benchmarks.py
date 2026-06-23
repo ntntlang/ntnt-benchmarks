@@ -190,11 +190,15 @@ def parse_wrk_output(output: str) -> dict[str, Any]:
     return result
 
 
-def require_successful_route(url: str, timeout_s: float) -> None:
-    with urlopen(url, timeout=timeout_s) as response:
-        if not 200 <= response.status < 300:
-            raise RuntimeError(f"{url} returned HTTP {response.status}")
-        response.read(1024)
+def route_preflight_error(url: str, timeout_s: float) -> str | None:
+    try:
+        with urlopen(url, timeout=timeout_s) as response:
+            if not 200 <= response.status < 300:
+                return f"HTTP {response.status}"
+            response.read(1024)
+    except Exception as exc:  # noqa: BLE001 - benchmark output records route failures
+        return str(exc)
+    return None
 
 
 def run_wrk(url: str, args: argparse.Namespace) -> dict[str, Any]:
@@ -270,7 +274,17 @@ def percentile(values: list[float], pct: float) -> float:
 
 def run_http_benchmark(bench: dict[str, str], args: argparse.Namespace, use_wrk: bool) -> dict[str, Any]:
     url = args.base_url + bench["path"]
-    require_successful_route(url, args.request_timeout)
+    preflight_error = route_preflight_error(url, args.request_timeout)
+    if preflight_error:
+        tool = "wrk" if use_wrk else "urllib-sequential"
+        return {
+            "name": bench["name"],
+            "path": bench["path"],
+            "url": url,
+            "tool": tool,
+            "ok": False,
+            "error": f"preflight failed: {preflight_error}",
+        }
     result = run_wrk(url, args) if use_wrk else run_urllib_loop(url, args)
     return {"name": bench["name"], "path": bench["path"], "url": url, **result}
 

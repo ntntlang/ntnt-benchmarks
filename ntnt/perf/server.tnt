@@ -80,15 +80,15 @@ fn db_single(req: Map) -> Map {
 
     let db_url = get_env("DATABASE_URL") ?? ""
     if db_url == "" {
-        return json(map { "skipped": true, "reason": "DATABASE_URL is not set" })
+        return json(map { "skipped": true, "reason": "DATABASE_URL is not set" }, 503)
     }
 
     let db = connect(db_url) otherwise {
-        return json(map { "error": "connect_failed" })
+        return json(map { "error": "connect_failed" }, 503)
     }
     let row = query_one(db, "SELECT 1 AS value", []) otherwise {
         close(db)
-        return json(map { "error": "query_failed" })
+        return json(map { "error": "query_failed" }, 500)
     }
     close(db)
     return json(map { "value": row["value"] ?? 1 })
@@ -99,17 +99,17 @@ fn db_multi(req: Map) -> Map {
 
     let db_url = get_env("DATABASE_URL") ?? ""
     if db_url == "" {
-        return json(map { "skipped": true, "reason": "DATABASE_URL is not set" })
+        return json(map { "skipped": true, "reason": "DATABASE_URL is not set" }, 503)
     }
 
     let db = connect(db_url) otherwise {
-        return json(map { "error": "connect_failed" })
+        return json(map { "error": "connect_failed" }, 503)
     }
     let mut total = 0
     for i in 0..5 {
         let row = query_one(db, "SELECT $1::int AS value", [i]) otherwise {
             close(db)
-            return json(map { "error": "query_failed" })
+            return json(map { "error": "query_failed" }, 500)
         }
         total = total + (row["value"] ?? 0)
     }
