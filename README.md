@@ -188,7 +188,8 @@ results/
 3. **Production mode** — debug logging disabled, hot-reload off, production flags set.
 4. **Pinned versions** — all runtime and dependency versions are pinned. See each subdirectory.
 5. **Median of 3** — each benchmark runs 3 times; the median result is reported. Eliminates warm-up noise.
-6. **Sequential** — frameworks run one at a time, never concurrently, so they don't compete for resources.
+6. **HTTP success only** — endpoints must return 2xx/3xx before warmup. A missing DB or failing route is marked skipped instead of recording error-page throughput.
+7. **Sequential** — frameworks run one at a time, never concurrently, so they don't compete for resources.
 
 ### Known caveats
 

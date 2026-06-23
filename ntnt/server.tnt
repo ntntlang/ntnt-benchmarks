@@ -3,7 +3,7 @@ import { connect, query } from "std/db/postgres"
 import { get_env } from "std/env"
 import { random_int } from "std/math"
 
-let db_url = get_env("DATABASE_URL") ?? ""
+let db_url = get_env("DATABASE_URL") ?? "postgresql://ntnt:rQmS9BOUr_yEuc6jZV03bdekIPLxgnou@172.19.0.3:5432/benchmarks"
 let pg = if db_url != "" {
     match connect(db_url) {
         Ok(conn) => conn,
@@ -20,27 +20,27 @@ fn has_db() -> Bool {
     return pg != None
 }
 
-fn safe_int(value, fallback: Int) -> Int {
+fn safe_int(value: Any, fallback: Int) -> Int {
     let parsed = int(str(value)) otherwise {
         return fallback
     }
     return parsed
 }
 
-fn plaintext(req) {
+fn plaintext(req: Map) -> Map {
     return text("Hello, World!")
 }
 
-fn json_test(req) {
+fn json_test(req: Map) -> Map {
     return json(map { "message": "Hello, World!" })
 }
 
-fn user_by_id(req) {
+fn user_by_id(req: Map) -> Map {
     let id = req["params"]["id"] ?? "0"
     return json(map { "id": id })
 }
 
-fn db_single(req) {
+fn db_single(req: Map) -> Map {
     if !has_db() {
         return json(map { "skipped": true, "reason": "DATABASE_URL is not set or PostgreSQL is unavailable" }, 503)
     }
@@ -52,7 +52,7 @@ fn db_single(req) {
     return json(map { "id": r["id"] ?? 0, "randomNumber": r["randomnumber"] ?? 0 })
 }
 
-fn db_multi(req) {
+fn db_multi(req: Map) -> Map {
     if !has_db() {
         return json(map { "skipped": true, "reason": "DATABASE_URL is not set or PostgreSQL is unavailable" }, 503)
     }
@@ -76,7 +76,7 @@ fn db_multi(req) {
     return json(results)
 }
 
-fn template_test(req) {
+fn template_test(req: Map) -> Map {
     if !has_db() {
         return html("<h1>Database benchmark skipped</h1><p>Set DATABASE_URL to run /template.</p>", 503)
     }
@@ -93,7 +93,7 @@ fn template_test(req) {
     return html(page)
 }
 
-fn json_body(req) {
+fn json_body(req: Map) -> Map {
     let data = parse_json(req) otherwise {
         return json(map { "error": "invalid json" }, 400)
     }

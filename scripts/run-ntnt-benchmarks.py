@@ -111,8 +111,9 @@ def wait_for_server(base_url: str, timeout_s: float) -> None:
     while time.monotonic() < deadline:
         try:
             with urlopen(base_url + "/", timeout=1) as response:
-                if 200 <= response.status < 500:
+                if 200 <= response.status < 300:
                     return
+                last_error = RuntimeError(f"HTTP {response.status}")
         except Exception as exc:  # noqa: BLE001 - readiness retry reports last error
             last_error = exc
         time.sleep(0.1)
@@ -120,11 +121,11 @@ def wait_for_server(base_url: str, timeout_s: float) -> None:
 
 
 def start_server(args: argparse.Namespace, env: dict[str, str]) -> tuple[subprocess.Popen[str], Any]:
-    command = [str(ntnt_binary(args)), "run", str(DEFAULT_SERVER)]
+    command = [str(ntnt_binary(args)), "run", DEFAULT_SERVER.name]
     log_file = tempfile.TemporaryFile(mode="w+")
     proc = subprocess.Popen(
         command,
-        cwd=BENCHMARK_REPO_ROOT,
+        cwd=DEFAULT_SERVER.parent,
         env=env,
         text=True,
         stdout=log_file,
@@ -163,6 +164,7 @@ def parse_wrk_output(output: str) -> dict[str, Any]:
     requests_match = re.search(r"Requests/sec:\s+([0-9.]+)", output)
     transfer_match = re.search(r"Transfer/sec:\s+([^\n]+)", output)
     latency_match = re.search(r"Latency\s+([0-9.]+)(us|ms|s)", output)
+    non_success_match = re.search(r"Non-2xx or 3xx responses:\s+([0-9]+)", output)
     result: dict[str, Any] = {"raw": output}
     warnings: list[str] = []
     if requests_match:
@@ -178,9 +180,21 @@ def parse_wrk_output(output: str) -> dict[str, Any]:
         result["avg_latency_ms"] = value * multiplier
     else:
         warnings.append("wrk Latency output did not match expected format")
+    if non_success_match:
+        non_success = int(non_success_match.group(1))
+        result["non_success_responses"] = non_success
+        if non_success > 0:
+            warnings.append(f"wrk saw {non_success} non-2xx/3xx response(s)")
     if warnings:
         result["parse_warning"] = "; ".join(warnings)
     return result
+
+
+def require_successful_route(url: str, timeout_s: float) -> None:
+    with urlopen(url, timeout=timeout_s) as response:
+        if not 200 <= response.status < 300:
+            raise RuntimeError(f"{url} returned HTTP {response.status}")
+        response.read(1024)
 
 
 def run_wrk(url: str, args: argparse.Namespace) -> dict[str, Any]:
@@ -204,7 +218,8 @@ def run_wrk(url: str, args: argparse.Namespace) -> dict[str, Any]:
             "elapsed_ms": result.elapsed_ms,
         }
     parsed = parse_wrk_output(result.stdout)
-    parsed.update({"tool": "wrk", "ok": True, "command": command, "elapsed_ms": result.elapsed_ms})
+    ok = not parsed.get("non_success_responses")
+    parsed.update({"tool": "wrk", "ok": ok, "command": command, "elapsed_ms": result.elapsed_ms})
     return parsed
 
 
@@ -255,6 +270,7 @@ def percentile(values: list[float], pct: float) -> float:
 
 def run_http_benchmark(bench: dict[str, str], args: argparse.Namespace, use_wrk: bool) -> dict[str, Any]:
     url = args.base_url + bench["path"]
+    require_successful_route(url, args.request_timeout)
     result = run_wrk(url, args) if use_wrk else run_urllib_loop(url, args)
     return {"name": bench["name"], "path": bench["path"], "url": url, **result}
 

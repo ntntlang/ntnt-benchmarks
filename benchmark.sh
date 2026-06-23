@@ -188,6 +188,24 @@ get_url() {
     esac
 }
 
+endpoint_status() {
+    local url="$1"
+    if [[ "$url" == POST:* ]]; then
+        curl -sS -o /dev/null -w "%{http_code}" \
+            -X POST \
+            -H "Content-Type: application/json" \
+            --data '{"message":"Hello, World!","numbers":[1,2,3,4,5],"nested":{"key":"value"}}' \
+            "${url#POST:}"
+    else
+        curl -sS -o /dev/null -w "%{http_code}" "$url"
+    fi
+}
+
+is_success_status() {
+    local status="$1"
+    [[ "$status" =~ ^2[0-9][0-9]$ || "$status" =~ ^3[0-9][0-9]$ ]]
+}
+
 run_wrk() {
     local url="$1"
     local method="${2:-GET}"
@@ -217,7 +235,10 @@ parse_wrk_output() {
     local p90=$(grep "90%" "$file" | awk '{print $2}')
     local p99=$(grep "99%" "$file" | awk '{print $2}')
     local transfer=$(grep "Transfer/sec:" "$file" | awk '{print $2}')
-    local errors=$(grep -c "Socket errors\|Non-2xx" "$file" || echo "0")
+    local socket_errors=$(grep -c "Socket errors" "$file" || true)
+    local non_success=$(grep "Non-2xx or 3xx responses:" "$file" | awk '{print $NF}' || true)
+    non_success="${non_success:-0}"
+    local errors=$((socket_errors + non_success))
 
     echo "${rps:-0}|${avg_lat:-0}|${p50:-0}|${p75:-0}|${p90:-0}|${p99:-0}|${transfer:-0}|${errors}"
 }
@@ -270,6 +291,15 @@ for bench in $BENCHMARKS; do
         url=$(get_url "$bench" "$port")
 
         start_framework "$fw" || { warn "Skipping $fw"; continue; }
+
+        status_code=$(endpoint_status "$url" || echo "000")
+        if ! is_success_status "$status_code"; then
+            warn "Skipping $fw / $bench: endpoint returned HTTP $status_code"
+            echo "| $fw | skipped | skipped | skipped | skipped | HTTP $status_code |" >> "$SUMMARY_FILE"
+            stop_framework "$fw"
+            sleep 2
+            continue
+        fi
 
         # Warmup
         log "  Warming up $fw (${WARMUP}s)..."
