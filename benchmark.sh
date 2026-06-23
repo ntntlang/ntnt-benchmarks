@@ -235,7 +235,8 @@ parse_wrk_output() {
     local p90=$(grep "90%" "$file" | awk '{print $2}')
     local p99=$(grep "99%" "$file" | awk '{print $2}')
     local transfer=$(grep "Transfer/sec:" "$file" | awk '{print $2}')
-    local socket_errors=$(grep -c "Socket errors" "$file" || true)
+    local socket_errors=$(grep "Socket errors:" "$file" | awk '{ total = 0; for (i = 1; i <= NF; i++) { gsub(",", "", $i); if ($i ~ /^[0-9]+$/) total += $i } print total }' || true)
+    socket_errors="${socket_errors:-0}"
     local non_success=$(grep "Non-2xx or 3xx responses:" "$file" | awk '{print $NF}' || true)
     non_success="${non_success:-0}"
     local errors=$((socket_errors + non_success))
