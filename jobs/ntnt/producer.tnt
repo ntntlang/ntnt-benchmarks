@@ -1,0 +1,26 @@
+// Enqueue BENCH_JOBS BenchJob jobs (each sleeping BENCH_WORK_MS) into
+// JOBS_STORE, then exit. The runner enqueues the whole backlog before
+// starting workers, so the measurement is drain throughput.
+
+import { configure_queue, enqueue } from "std/jobs"
+import { get_env } from "std/env"
+import { sleep } from "std/time"
+
+let store = get_env("JOBS_STORE") ?? "sqlite:./jobs-bench.db"
+configure_queue(map { "store": store })
+
+job BenchJob on bench {
+    perform(work_ms) {
+        if work_ms > 0 {
+            sleep(work_ms)
+        }
+    }
+}
+
+let jobs = unwrap(int(get_env("BENCH_JOBS") ?? "1000"))
+let work_ms = unwrap(int(get_env("BENCH_WORK_MS") ?? "20"))
+
+for i in 0..jobs {
+    unwrap(enqueue("BenchJob", map { "work_ms": work_ms }))
+}
+print("enqueued #{jobs}")

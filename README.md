@@ -4,7 +4,7 @@ HTTP framework performance benchmarks comparing **ntnt** against popular alterna
 
 > **Language:** ntnt current `dev-release` or installed binary
 > **Competitors:** Actix Web · Gin · FastAPI · Fastify · Hono/Bun · Django · Express · Rails
-> **Tools:** `benchmark.sh` for cross-framework HTTP benchmarks; `scripts/run-ntnt-benchmarks.py` for DD-061 ntnt-internal before/after runs
+> **Tools:** `benchmark.sh` for cross-framework HTTP benchmarks; `scripts/run-ntnt-benchmarks.py` for DD-061 ntnt-internal before/after runs; `scripts/run-jobs-benchmarks.py` for background-job throughput (ntnt SQLite/Redis vs BullMQ and Sidekiq, see [jobs/](jobs/README.md))
 
 ---
 
@@ -153,7 +153,15 @@ DATABASE_URL=postgres://ntnt:***@localhost/benchmarks \
 
 Results are written to `results/ntnt-internal/`. For performance PRs, run the same command on `main` and the candidate branch, then compare the generated Markdown summaries.
 
-**Options:**
+### Background job benchmarks
+
+Job throughput and multi-process scaling for ntnt on SQLite and Redis, compared with BullMQ and Sidekiq on the same Redis. See [jobs/README.md](jobs/README.md) for the method and setup.
+
+```bash
+NTNT_REPO=../ntnt python3 scripts/run-jobs-benchmarks.py --quick
+```
+
+**`benchmark.sh` options:**
 
 | Flag | Default | Description |
 |------|---------|-------------|

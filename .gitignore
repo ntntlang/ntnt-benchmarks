@@ -11,3 +11,4 @@ vendor/
 tmp/
 *.log
 results/ntnt-internal/
+results/jobs/runs/
