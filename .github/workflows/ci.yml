@@ -16,4 +16,4 @@ jobs:
           bash -n generate-report.sh
           bash -n append-to-dd.sh
       - name: Check Python scripts
-        run: python3 -m py_compile scripts/run-ntnt-benchmarks.py
+        run: python3 -m py_compile scripts/run-ntnt-benchmarks.py scripts/run-jobs-benchmarks.py

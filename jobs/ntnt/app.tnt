@@ -1,0 +1,21 @@
+// Job benchmark fixture: one job type that sleeps for a fixed time.
+//
+// The runner sets JOBS_STORE (for example "sqlite:/tmp/x/jobs.db" or
+// "redis://10.0.0.2:6379/15") and starts `ntnt worker app.tnt` processes.
+// producer.tnt imports nothing from here; it re-declares the same job so it
+// can enqueue without starting workers.
+
+import { configure_queue } from "std/jobs"
+import { get_env } from "std/env"
+import { sleep } from "std/time"
+
+let store = get_env("JOBS_STORE") ?? "sqlite:./jobs-bench.db"
+configure_queue(map { "store": store })
+
+job BenchJob on bench {
+    perform(work_ms) {
+        if work_ms > 0 {
+            sleep(work_ms)
+        }
+    }
+}
