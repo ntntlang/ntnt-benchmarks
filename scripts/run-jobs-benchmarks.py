@@ -317,7 +317,13 @@ def run_once(
         )
 
     hz = os.sysconf("SC_CLK_TCK")
-    ts = sorted(t for t, _ in completions)
+    # Score each job once, at its first completion; duplicates are reported
+    # separately and never inflate throughput.
+    first: dict[str, int] = {}
+    for t, i in completions:
+        if i not in first or t < first[i]:
+            first[i] = t
+    ts = sorted(first.values())
     ids = [i for _, i in completions]
     measured = [k for k in commands if k not in {"info", "config", "select", "ping", "flushdb", "client", "hello"}]
     return {
@@ -432,7 +438,7 @@ def summarize(runs: list[dict[str, Any]]) -> dict[str, Any]:
     # Incomplete or timed-out runs are kept in the JSON but never scored.
     rates = [r["steady_jobs_per_s"] for r in runs if valid(r) and r["steady_jobs_per_s"]]
     def med(key: str) -> Any:
-        vals = [r[key] for r in runs if r.get(key) is not None]
+        vals = [r[key] for r in runs if valid(r) and r.get(key) is not None]
         return round(statistics.median(vals), 2) if vals else None
     return {
         "median_jobs_per_s": round(statistics.median(rates), 1) if rates else None,
