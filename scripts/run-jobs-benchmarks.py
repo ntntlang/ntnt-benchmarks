@@ -49,14 +49,18 @@ TARGETS = ["ntnt-sqlite", "ntnt-redis", "bullmq", "sidekiq"]
 class Redis:
     def __init__(self, url: str) -> None:
         u = urlparse(url)
+        if u.scheme != "redis":
+            raise SystemExit(f"only redis:// URLs are supported by the runner (got {u.scheme}://)")
         self.host = u.hostname or "127.0.0.1"
         self.port = u.port or 6379
         self.db = int((u.path or "/0").lstrip("/") or 0)
+        self.auth = [a for a in (u.username, u.password) if a] if u.password else []
 
     def call(self, *args: str) -> Any:
         with socket.create_connection((self.host, self.port), timeout=10) as s:
             f = s.makefile("rb")
-            for cmd in (("SELECT", str(self.db)), args):
+            prelude = [("AUTH", *self.auth)] if self.auth else []
+            for cmd in (*prelude, ("SELECT", str(self.db)), args):
                 out = f"*{len(cmd)}\r\n".encode()
                 for a in cmd:
                     b = str(a).encode()
@@ -281,7 +285,7 @@ def run_once(
         time.sleep(0.2)
         for r in readers:
             completions.extend(r.poll())
-        if len(completions) >= args.jobs:
+        if len({i for _, i in completions}) >= args.jobs:
             break
         if time.time() > deadline:
             timed_out = True
@@ -420,8 +424,13 @@ class DockerRedis:
 # ---------------------------------------------------------------------------
 
 
+def valid(run: dict[str, Any]) -> bool:
+    return not run["timed_out"] and run["unique_completed"] >= run["jobs"]
+
+
 def summarize(runs: list[dict[str, Any]]) -> dict[str, Any]:
-    rates = [r["steady_jobs_per_s"] for r in runs if r["steady_jobs_per_s"]]
+    # Incomplete or timed-out runs are kept in the JSON but never scored.
+    rates = [r["steady_jobs_per_s"] for r in runs if valid(r) and r["steady_jobs_per_s"]]
     def med(key: str) -> Any:
         vals = [r[key] for r in runs if r.get(key) is not None]
         return round(statistics.median(vals), 2) if vals else None
@@ -429,7 +438,8 @@ def summarize(runs: list[dict[str, Any]]) -> dict[str, Any]:
         "median_jobs_per_s": round(statistics.median(rates), 1) if rates else None,
         "min_jobs_per_s": min(rates) if rates else None,
         "max_jobs_per_s": max(rates) if rates else None,
-        "all_completed": all(r["completed"] >= r["jobs"] for r in runs),
+        "all_completed": all(valid(r) for r in runs),
+        "scored_runs": len(rates),
         "duplicates": sum(r["completed"] - r["unique_completed"] for r in runs),
         "median_drain_s": med("drain_s"),
         "median_enqueue_s": med("enqueue_s"),
@@ -541,13 +551,17 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--ntnt-bin", default=os.environ.get("NTNT_BIN"), help="ntnt binary (default NTNT_BIN, NTNT_REPO/target/release/ntnt, or ntnt on PATH)")
     p.add_argument("--ntnt-repo", default=os.environ.get("NTNT_REPO"), help="ntnt checkout, recorded in results and used to find the binary")
     p.add_argument("--ntnt-poll-ms", type=int, default=None, help="Pass --poll-interval to ntnt workers (default: ntnt's own default)")
-    p.add_argument("--redis-url", default=os.environ.get("BENCH_REDIS_URL"), help="Use an existing Redis (its DB is FLUSHed every run!) instead of a Docker container")
+    p.add_argument("--redis-url", default=os.environ.get("BENCH_REDIS_URL"), help="Use an existing redis:// server instead of a Docker container (requires --flush-redis-db)")
+    p.add_argument("--flush-redis-db", action="store_true", help="Confirm the --redis-url database may be FLUSHDB'd before every run")
     p.add_argument("--cpu-layout", choices=["auto", "none"], default="auto", help="auto: pin Docker Redis to the last 2 CPUs and everything else to the rest")
     p.add_argument("--run-timeout", type=float, default=300.0)
     p.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT)
     args = p.parse_args()
     if args.quick:
         args.processes, args.concurrency, args.jobs, args.runs = [1, 4], [4], 400, 1
+    if args.redis_url and not args.flush_redis_db:
+        p.error("--redis-url erases that database (FLUSHDB) before every run; use a dedicated "
+                "database number and pass --flush-redis-db to confirm")
     return args
 
 

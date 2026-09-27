@@ -27,7 +27,10 @@ Each run also records:
 - CPU cores used by Redis and by the workers, and how busy the host was
 - ntnt claim deferrals, and how many jobs each worker process completed
 
-A run is rejected if a worker process exits before the backlog drains.
+A run is rejected if a worker process exits before the backlog drains. The
+drain ends when every *unique* job has completed. Runs that time out or finish
+fewer unique jobs than enqueued stay in the JSON, but they are left out of the
+reported median and flagged in the table.
 
 With sleep-bound jobs, ideal throughput is `P × C × 1000 / work_ms`. The gap
 from that ideal is queue overhead. Use `--work-ms 0` to measure pure queue cost.
@@ -36,8 +39,11 @@ from that ideal is queue overhead. Use `--work-ms 0` to measure pure queue cost.
 container with persistence off, pins it to the last 2 CPUs, and pins workers
 and producers to the rest, so Redis never competes with the workers for CPU.
 The layout is recorded in the results. `--cpu-layout none` turns pinning off.
-`--redis-url` uses an existing Redis instead, for example on another host.
-**Its database is flushed before every run.**
+`--redis-url` uses an existing `redis://` server instead, for example on
+another host. Credentials in the URL are honored, but TLS (`rediss://`) is not
+supported. Because that database is **flushed before every run**, the runner
+refuses to start without `--flush-redis-db`. Point it at a dedicated database
+number.
 
 **ntnt specifics.** Each worker process gets its own `--worker-group`, because
 one checkout allows only one worker process per group on a host (control-socket
