@@ -6,10 +6,7 @@ import asyncpg
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, JSONResponse
 
-DATABASE_URL = os.environ.get(
-    "DATABASE_URL",
-    "postgresql://ntnt:rQmS9BOUr_yEuc6jZV03bdekIPLxgnou@172.19.0.3:5432/benchmarks",
-)
+DATABASE_URL = os.environ.get("DATABASE_URL", "")
 
 pool = None
 

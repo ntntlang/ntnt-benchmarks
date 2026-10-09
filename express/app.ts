@@ -1,9 +1,7 @@
 import express, { Request, Response } from "express";
 import pg from "pg";
 
-const DATABASE_URL =
-  process.env.DATABASE_URL ||
-  "postgresql://ntnt:rQmS9BOUr_yEuc6jZV03bdekIPLxgnou@172.19.0.3:5432/benchmarks";
+const DATABASE_URL = process.env.DATABASE_URL || "";
 
 const pool = new pg.Pool({
   connectionString: DATABASE_URL,
@@ -85,6 +83,6 @@ app.post("/json", (req: Request, res: Response) => {
 });
 
 const PORT = parseInt(process.env.PORT || "3102");
-app.listen(PORT, () => {
+app.listen(PORT, "127.0.0.1", () => {
   console.log(`Express listening on :${PORT}`);
 });

@@ -12,7 +12,7 @@ DATABASES = {
         'USER': 'ntnt',
         'PASSWORD': os.environ.get('DB_PASSWORD', 'changeme'),
         'HOST': os.environ.get('DB_HOST', 'localhost'),
-        'PORT': '5432',
+        'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

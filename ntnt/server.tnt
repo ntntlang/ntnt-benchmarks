@@ -108,4 +108,4 @@ get("/queries", db_multi)
 get("/template", template_test)
 post("/json", json_body)
 
-listen(3100)
+listen(unwrap(int(get_env("PORT") ?? "3100")), map { "host": "127.0.0.1" })

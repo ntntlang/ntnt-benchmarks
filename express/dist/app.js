@@ -5,8 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const pg_1 = __importDefault(require("pg"));
-const DATABASE_URL = process.env.DATABASE_URL ||
-    "postgresql://ntnt:rQmS9BOUr_yEuc6jZV03bdekIPLxgnou@172.19.0.3:5432/benchmarks";
+const DATABASE_URL = process.env.DATABASE_URL || "";
 const pool = new pg_1.default.Pool({
     connectionString: DATABASE_URL,
     max: 50,
@@ -69,6 +68,6 @@ app.post("/json", (req, res) => {
     res.json(req.body);
 });
 const PORT = parseInt(process.env.PORT || "3102");
-app.listen(PORT, () => {
+app.listen(PORT, "127.0.0.1", () => {
     console.log(`Express listening on :${PORT}`);
 });

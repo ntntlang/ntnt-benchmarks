@@ -1,9 +1,7 @@
 import { Hono } from "hono";
 import { Pool } from "pg";
 
-const DATABASE_URL =
-  process.env.DATABASE_URL ||
-  "postgresql://ntnt:rQmS9BOUr_yEuc6jZV03bdekIPLxgnou@172.19.0.3:5432/benchmarks";
+const DATABASE_URL = process.env.DATABASE_URL || "";
 
 const pool = new Pool({
   connectionString: DATABASE_URL,
@@ -87,6 +85,7 @@ app.post("/json", async (c) => {
 });
 
 export default {
-  port: 3104,
+  port: parseInt(process.env.PORT || "3104"),
+  hostname: "127.0.0.1",
   fetch: app.fetch,
 };
