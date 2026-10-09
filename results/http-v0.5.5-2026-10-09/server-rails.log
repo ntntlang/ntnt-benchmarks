@@ -1,0 +1,19 @@
+[540693] Puma starting in cluster mode...
+[540693] * Puma version: 6.6.1 ("Return to Forever")
+[540693] * Ruby version: ruby 3.2.3 (2024-01-18 revision 52bb2ac0a6) [x86_64-linux-gnu]
+[540693] *  Min threads: 5
+[540693] *  Max threads: 5
+[540693] *  Environment: production
+[540693] *   Master PID: 540693
+[540693] *      Workers: 4
+[540693] *     Restarts: (✔) hot (✖) phased (✖) refork
+[540693] * Preloading application
+[540693] * Listening on http://127.0.0.1:33307
+[540693] Use Ctrl-C to stop
+[540693] - Worker 0 (PID: 540753) booted in 0.01s, phase: 0
+[540693] - Worker 1 (PID: 540756) booted in 0.01s, phase: 0
+[540693] - Worker 2 (PID: 540761) booted in 0.0s, phase: 0
+[540693] - Worker 3 (PID: 540767) booted in 0.0s, phase: 0
+[540693] === puma shutdown: 2026-10-09 09:15:51 -0600 ===
+[540693] - Goodbye!
+[540693] - Gracefully shutting down workers...

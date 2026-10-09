@@ -16,4 +16,6 @@ jobs:
           bash -n generate-report.sh
           bash -n append-to-dd.sh
       - name: Check Python scripts
-        run: python3 -m py_compile scripts/run-ntnt-benchmarks.py
+        run: python3 -m py_compile scripts/run-ntnt-benchmarks.py scripts/http_benchmarks.py scripts/revalidate_http_results.py
+      - name: Test HTTP validation and lifecycle
+        run: python3 -m unittest discover -s tests -v

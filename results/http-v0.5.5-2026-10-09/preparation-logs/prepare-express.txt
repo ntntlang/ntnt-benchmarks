@@ -1,0 +1,4 @@
+['/home/larimonious/.hermes/tools/node-26.7.0-linux-x64/bin/npm', 'ci', '--include=dev', '--no-audit', '--no-fund']
+
+added 97 packages in 506ms
+['/home/larimonious/repos-worktrees/ntnt-bench-v055/express/node_modules/.bin/tsc']

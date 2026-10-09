@@ -17,6 +17,7 @@ import shutil
 import sys
 import urllib.request
 import uuid
+from typing import Any
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 FRAMEWORKS = 'ntnt fastapi express gin hono actix fastify rails django'.split()
@@ -176,7 +177,7 @@ def probe(benchmark, port, world, out, label, samples=3):
         req = urllib.request.Request(f'http://127.0.0.1:{port}' + PATHS[benchmark],
             data=PAYLOAD if benchmark == 'json-body' else None,
             headers={'Content-Type': 'application/json'} if benchmark == 'json-body' else {})
-        record = {'time': utcnow(), 'url': req.full_url, 'method': req.get_method()}
+        record: dict[str, Any] = {'time': utcnow(), 'url': req.full_url, 'method': req.get_method()}
         try:
             # No redirect following: a fallback/login page is not the fixture.
             opener = urllib.request.build_opener(NoRedirect, urllib.request.ProxyHandler({}))
@@ -287,8 +288,8 @@ def wrk_run(args, benchmark, port, duration, out, name, server_process=None):
     return result
 
 
-def save_results(out, report):
-    write_json(out / 'results.json', report)
+def save_results(out, report, json_name='results.json', markdown_name='summary.md'):
+    write_json(out / json_name, report)
     lines = ['# Validated HTTP benchmark results', '',
         'Shared live-service host; loopback client, servers and local PostgreSQL contend for the recorded CPU set. Not an isolated capacity test or a percentage comparison to historical NTNT 0.4.2.', '',
         f"Config: {report['config']}", '',
@@ -310,7 +311,7 @@ def save_results(out, report):
             run = soak.get('run', {})
             memory = run.get('memory', {})
             lines.append(f"| {fw} | {soak.get('valid')} | {soak.get('bounded')} | {memory.get('growth_kib', '—')} | {memory.get('peak_pss_kib', '—')} | {run.get('requests', '—')} |")
-    (out / 'summary.md').write_text('\n'.join(lines) + '\n')
+    (out / markdown_name).write_text('\n'.join(lines) + '\n')
 
 
 def main():
@@ -391,7 +392,6 @@ def main():
                 with (out / f'server-{fw}.log').open('w') as log:
                     process = subprocess.Popen(['taskset', '-c', args.cpus] + launch, cwd=path, env=fw_env, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
                 report['preparation'][fw]['owned_pid'] = process.pid
-                report['preparation'][fw]['cpu_affinity'] = sorted(os.sched_getaffinity(process.pid))
                 for _ in range(60):
                     if process.poll() is not None:
                         raise RuntimeError(f'server exited {process.returncode}; see server-{fw}.log')
@@ -401,6 +401,8 @@ def main():
                     time.sleep(0.5)
                 else:
                     raise RuntimeError(f'server readiness timeout; see server-{fw}.log')
+                # taskset may not have run immediately after Popen; sample once ready.
+                report['preparation'][fw]['cpu_affinity'] = sorted(os.sched_getaffinity(process.pid))
                 for bench in benchmarks:
                     cell = {'framework': fw, 'benchmark': bench, 'status': 'running', 'runs': []}
                     report['results'].append(cell)
@@ -425,7 +427,7 @@ def main():
                     save_results(out, report)
                 if args.stability_seconds:
                     print('STABILITY', fw, args.stability_seconds, flush=True)
-                    soak = {'preflight': probe('json-body', port, world, out, fw + '-soak-before')}
+                    soak: dict[str, Any] = {'preflight': probe('json-body', port, world, out, fw + '-soak-before')}
                     report.setdefault('stability', {})[fw] = soak
                     if all(v['valid'] for v in soak['preflight']):
                         soak['run'] = wrk_run(args, 'json-body', port, args.stability_seconds, out, f'stability-{fw}.txt', process)
@@ -451,7 +453,7 @@ def main():
         raise
     finally:
         cleanup = {}
-        for kind, argv in [('container', ['docker', 'rm', '-f']), ('network', ['docker', 'network', 'rm'])]:
+        for kind, argv in [('container', ['docker', 'rm', '-f', '-v']), ('network', ['docker', 'network', 'rm'])]:
             if owned.get(kind):
                 try:
                     cleanup[kind] = command(argv + [owned[kind]])
@@ -538,7 +540,7 @@ def validate_body(benchmark, body, world):
 
 
 def parse_wrk(raw, returncode):
-    total = re.search(r'(\d+) requests in ([\d.]+)s, (\S+) read', raw)
+    total = re.search(r'(\d+) requests in ([\d.]+)(us|ms|s|m|h), (\S+) read', raw)
     rps = re.search(r'^Requests/sec:\s+([\d.]+)', raw, re.M)
     non = re.search(r'Non-2xx or 3xx responses:\s*(\d+)', raw)
     errors = re.search(r'Socket errors: connect (\d+), read (\d+), write (\d+), timeout (\d+)', raw)
@@ -551,7 +553,7 @@ def parse_wrk(raw, returncode):
         'returncode': returncode, 'requests': requests,
         'successful_responses': requests - non_success, 'non_success_responses': non_success,
         'socket_errors': sockets, 'requests_per_second': float(rps[1]) if rps else None,
-        'elapsed_seconds': float(total[2]) if total else None,
+        'elapsed_seconds': float(total[2]) * {'us': 0.000001, 'ms': 0.001, 's': 1, 'm': 60, 'h': 3600}[total[3]] if total else None,
         'latency_avg': latency[1] if latency else None,
         'latency_stdev': latency[2] if latency else None,
         'latency_max': latency[3] if latency else None,

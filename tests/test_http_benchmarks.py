@@ -8,7 +8,7 @@ MODULE = ROOT / 'scripts' / 'http_benchmarks.py'
 
 def load_runner():
     if not MODULE.exists():
-        return None
+        raise FileNotFoundError(MODULE)
     spec = importlib.util.spec_from_file_location('http_benchmarks', MODULE)
     assert spec is not None and spec.loader is not None
     mod = importlib.util.module_from_spec(spec)
@@ -32,6 +32,13 @@ Transfer/sec:    136.44KB
 
 
 class WrkTests(unittest.TestCase):
+    def test_minute_formatted_real_soak_count_is_not_lost(self):
+        mod = load_runner()
+        result = mod.parse_wrk(RAW.replace('15000 requests in 15.01s', '8524125 requests in 2.00m'), 0)
+        self.assertTrue(result['valid'])
+        self.assertEqual(result['requests'], 8524125)
+        self.assertEqual(result['elapsed_seconds'], 120.0)
+
     def test_errorful_run_is_rejected_and_counts_retained(self):
         mod = load_runner()
         raw = RAW + '  Socket errors: connect 1, read 2, write 3, timeout 4\n  Non-2xx or 3xx responses: 7\n'
@@ -102,6 +109,32 @@ class CliTests(unittest.TestCase):
 
 
 class ProbeTests(unittest.TestCase):
+    def test_real_wrk_rejects_500_throughput(self):
+        import http.server, threading, tempfile, os, shutil
+        from types import SimpleNamespace
+        if not shutil.which('wrk') or not shutil.which('taskset'):
+            self.skipTest('wrk/taskset unavailable; parser unit tests still run')
+        mod = load_runner()
+        class Handler(http.server.BaseHTTPRequestHandler):
+            protocol_version = 'HTTP/1.1'
+            def do_GET(self):
+                self.send_response(500); self.send_header('Content-Length', '5'); self.end_headers()
+                self.wfile.write(b'error')
+            def log_message(self, format, *args):
+                pass
+        server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True); thread.start()
+        try:
+            with tempfile.TemporaryDirectory(dir=os.environ.get('TMPDIR', str(ROOT))) as directory:
+                args = SimpleNamespace(cpus=str(min(os.sched_getaffinity(0))), threads=1, connections=1)
+                result = mod.wrk_run(args, 'json', server.server_port, 1, pathlib.Path(directory), 'raw-error.txt')
+                self.assertGreater(result['requests'], 0)
+                self.assertGreater(result['non_success_responses'], 0)
+                self.assertFalse(result['valid'])
+                self.assertIsNone(mod.summarize([result], 1)['median_rps'])
+        finally:
+            server.shutdown(); server.server_close(); thread.join()
+
     def test_live_get_post_wrong_body_and_partial_report(self):
         import http.server, threading, tempfile, json, os
         mod = load_runner()
@@ -112,7 +145,7 @@ class ProbeTests(unittest.TestCase):
             def do_POST(self):
                 body = self.rfile.read(int(self.headers['Content-Length']))
                 self.send_response(200); self.end_headers(); self.wfile.write(body)
-            def log_message(self, *args):
+            def log_message(self, format, *args):
                 pass
         server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Handler)
         thread = threading.Thread(target=server.serve_forever, daemon=True)
