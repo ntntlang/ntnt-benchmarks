@@ -109,9 +109,7 @@ async fn json_body(body: web::Json<serde_json::Value>) -> HttpResponse {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
-        "host=172.19.0.3 port=5432 user=ntnt password=rQmS9BOUr_yEuc6jZV03bdekIPLxgnou dbname=benchmarks".to_string()
-    });
+    let db_url = std::env::var("DATABASE_URL").expect("DATABASE_URL is required");
 
     let mut cfg = Config::new();
     cfg.url = Some(db_url);
@@ -137,8 +135,8 @@ async fn main() -> std::io::Result<()> {
             .route("/template", web::get().to(template_test))
             .route("/json", web::post().to(json_body))
     })
-    .workers(num_cpus::get())
-    .bind("0.0.0.0:3105")?
+    .workers(std::env::var("BENCH_WORKERS").unwrap_or_else(|_| "4".into()).parse().expect("BENCH_WORKERS"))
+    .bind(("127.0.0.1", std::env::var("PORT").unwrap_or_else(|_| "3105".into()).parse::<u16>().expect("PORT")))?
     .run()
     .await
 }

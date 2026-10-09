@@ -23,7 +23,8 @@ type World struct {
 func main() {
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
-		dbURL = "postgresql://ntnt:rQmS9BOUr_yEuc6jZV03bdekIPLxgnou@172.19.0.3:5432/benchmarks"
+		fmt.Fprintln(os.Stderr, "DATABASE_URL is required")
+		os.Exit(1)
 	}
 
 	var err error
@@ -114,5 +115,7 @@ func main() {
 		c.JSON(http.StatusOK, body)
 	})
 
-	r.Run(":3103")
+	port := os.Getenv("PORT")
+	if port == "" { port = "3103" }
+	r.Run("127.0.0.1:" + port)
 }

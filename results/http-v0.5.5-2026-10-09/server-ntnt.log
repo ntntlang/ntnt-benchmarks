@@ -1,0 +1,10 @@
+Running in production mode (hot-reload disabled)
+
+🚀 Server running — visit http://127.0.0.1:33300
+   Routes: 7  |  Static: 0  |  Workers: 4  |  Hot-reload: disabled
+
+Press Ctrl+C to stop
+
+🛑 Shutdown signal received, stopping server...
+
+🛑 Server shutting down...

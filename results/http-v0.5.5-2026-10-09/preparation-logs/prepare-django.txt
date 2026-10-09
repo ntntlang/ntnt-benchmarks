@@ -1,0 +1,37 @@
+['/usr/bin/python3', '-m', 'venv', '/home/larimonious/repos-worktrees/ntnt-bench-v055/django/.venv']
+['/home/larimonious/repos-worktrees/ntnt-bench-v055/django/.venv/bin/pip', 'install', '-r', 'requirements.txt']
+Collecting django==5.0 (from -r requirements.txt (line 1))
+  Downloading Django-5.0-py3-none-any.whl.metadata (4.1 kB)
+Collecting gunicorn==21.2.0 (from -r requirements.txt (line 2))
+  Downloading gunicorn-21.2.0-py3-none-any.whl.metadata (4.1 kB)
+Collecting psycopg2-binary==2.9.9 (from -r requirements.txt (line 3))
+  Downloading psycopg2_binary-2.9.9-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.4 kB)
+Collecting uvicorn==0.27.0 (from -r requirements.txt (line 4))
+  Downloading uvicorn-0.27.0-py3-none-any.whl.metadata (6.4 kB)
+Collecting asgiref>=3.7.0 (from django==5.0->-r requirements.txt (line 1))
+  Downloading asgiref-3.12.1-py3-none-any.whl.metadata (9.4 kB)
+Collecting sqlparse>=0.3.1 (from django==5.0->-r requirements.txt (line 1))
+  Downloading sqlparse-0.6.0-py3-none-any.whl.metadata (6.0 kB)
+Collecting packaging (from gunicorn==21.2.0->-r requirements.txt (line 2))
+  Downloading packaging-26.3-py3-none-any.whl.metadata (3.5 kB)
+Collecting click>=7.0 (from uvicorn==0.27.0->-r requirements.txt (line 4))
+  Using cached click-8.5.0-py3-none-any.whl.metadata (2.6 kB)
+Collecting h11>=0.8 (from uvicorn==0.27.0->-r requirements.txt (line 4))
+  Using cached h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+Downloading Django-5.0-py3-none-any.whl (8.1 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 8.1/8.1 MB 80.9 MB/s eta 0:00:00
+Downloading gunicorn-21.2.0-py3-none-any.whl (80 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 80.2/80.2 kB 5.3 MB/s eta 0:00:00
+Downloading psycopg2_binary-2.9.9-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (3.0 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.0/3.0 MB 80.5 MB/s eta 0:00:00
+Downloading uvicorn-0.27.0-py3-none-any.whl (60 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 60.6/60.6 kB 3.6 MB/s eta 0:00:00
+Downloading asgiref-3.12.1-py3-none-any.whl (25 kB)
+Using cached click-8.5.0-py3-none-any.whl (125 kB)
+Using cached h11-0.16.0-py3-none-any.whl (37 kB)
+Downloading sqlparse-0.6.0-py3-none-any.whl (50 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 50.1/50.1 kB 2.6 MB/s eta 0:00:00
+Downloading packaging-26.3-py3-none-any.whl (129 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 130.0/130.0 kB 12.5 MB/s eta 0:00:00
+Installing collected packages: sqlparse, psycopg2-binary, packaging, h11, click, asgiref, uvicorn, gunicorn, django
+Successfully installed asgiref-3.12.1 click-8.5.0 django-5.0 gunicorn-21.2.0 h11-0.16.0 packaging-26.3 psycopg2-binary-2.9.9 sqlparse-0.6.0 uvicorn-0.27.0

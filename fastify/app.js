@@ -3,7 +3,7 @@ import pg from 'pg';
 
 const { Pool } = pg;
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgres://user:pass@localhost:5432/benchmarks'
+  connectionString: process.env.DATABASE_URL || ''
 });
 
 const fastify = Fastify({ logger: false });
@@ -66,7 +66,7 @@ fastify.post('/json', async (req, reply) => {
   return req.body;
 });
 
-fastify.listen({ port: parseInt(process.env.PORT) || 3106, host: '0.0.0.0' }, (err) => {
+fastify.listen({ port: parseInt(process.env.PORT) || 3106, host: '127.0.0.1' }, (err) => {
   if (err) { console.error(err); process.exit(1); }
   console.log('Fastify listening on', fastify.server.address().port);
 });

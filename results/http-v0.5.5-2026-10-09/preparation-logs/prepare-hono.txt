@@ -1,0 +1,4 @@
+['/home/larimonious/.bun/bin/bun', 'install', '--frozen-lockfile']
+bun install v1.3.10 (30e609e0)
+
+Checked 18 installs across 19 packages (no changes) [3.00ms]

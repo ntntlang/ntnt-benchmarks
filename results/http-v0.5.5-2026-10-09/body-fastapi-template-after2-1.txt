@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html>
+<head><title>Benchmark</title></head>
+<body>
+<h1>World Database</h1>
+<table>
+<tr><th>ID</th><th>Random Number</th></tr>
+<tr><td>6770</td><td>2629</td></tr><tr><td>7750</td><td>6058</td></tr><tr><td>7027</td><td>9102</td></tr><tr><td>8988</td><td>5861</td></tr><tr><td>3490</td><td>643</td></tr><tr><td>6338</td><td>1913</td></tr><tr><td>1629</td><td>9441</td></tr><tr><td>8411</td><td>1126</td></tr><tr><td>1000</td><td>8875</td></tr><tr><td>5691</td><td>9100</td></tr>
+</table>
+</body>
+</html>

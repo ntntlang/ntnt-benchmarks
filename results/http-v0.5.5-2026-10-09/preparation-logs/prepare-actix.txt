@@ -1,0 +1,3 @@
+['/home/larimonious/.cargo/bin/cargo', 'build', '--release', '--locked', '-j', '2']
+   Compiling actix-bench v0.1.0 (/home/larimonious/repos-worktrees/ntnt-bench-v055/actix)
+    Finished `release` profile [optimized] target(s) in 30.05s
