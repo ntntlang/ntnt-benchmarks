@@ -1,5 +1,5 @@
 import { json, text } from "std/http/server"
-import { open, get, set } from "std/kv"
+import { open, get as kv_get, set } from "std/kv"
 import { random_int } from "std/math"
 
 import { get_env } from "std/env"
@@ -24,7 +24,7 @@ fn health(req) {
 // Read a random key
 fn kv_read(req) {
     let id = random_int(0, 999)
-    let val = get(kv, "bench:#{id}") otherwise {
+    let val = kv_get(kv, "bench:#{id}") otherwise {
         return json(map { "error": "read failed" })
     }
     return json(val ?? map { "miss": true })
@@ -40,7 +40,7 @@ fn kv_write(req) {
 // Read + Write (mixed)
 fn kv_mixed(req) {
     let read_id = random_int(0, 999)
-    let val = get(kv, "bench:#{read_id}") otherwise {
+    let val = kv_get(kv, "bench:#{read_id}") otherwise {
         return json(map { "error": "read failed" })
     }
     let write_id = random_int(0, 999)
